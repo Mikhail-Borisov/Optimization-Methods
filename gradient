@@ -1,0 +1,76 @@
+from abc import ABCMeta, abstractmethod
+import numpy as np
+
+class AbstractGradient(object):
+    """
+    This is an abstract class for various gradient descent classes. Other
+    ones should inherit from this one.
+    """
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def iterate():
+        """
+        Makes an iteration of gradient descent
+        """
+        raise NotImplementedError("You forgot to implement the 'iterate' method")
+
+    def calculate_gradient(func, x, dx = 0.000001):
+        grad = np.zeros(len(x))
+        for i in range(len(x)):
+            delta = np.zeros(len(x))
+            delta[i] = dx
+            grad[i] = (func(x+dx)-func(x-dx))/(2*dx)
+        return grad
+
+
+class SimpleGradient(AbstractGradient):
+    """
+    Implements simple gradient descent
+    """
+    def __init__(self, func, x_start, gamma = 0.5, precision=0.001,
+                max_iterations = 500):
+        self.func = func
+        self.funx_value = func(x_start)
+        self.x_start = x_start
+        self.x = x_start
+        self.gamma = gamma
+        self.precision = precision
+        self.grad = SimpleGradient.calculate_gradient(func, x_start)
+        self.iter_count = 0
+        self.max_iterations = max_iterations
+
+    def iterate(self):
+        """
+        Makes an iteraion of gradient descent
+        """
+        self.x = self.x - self.gamma * self.grad
+        self.func_value = self.func(self.x)
+        self.grad = SimpleGradient.calculate_gradient(self.func, self.x)
+        self.iter_count += 1
+
+    def __str__(self):
+        return "Simple gradient\nCurrent values:\nx:%s\ngradient:%s\ny:%s" \
+                % (self.x, self.grad, self.func_value)
+
+    def run(self):
+        """
+        Runs iterations of gradient descent until a stopping condition is
+        fulfilled
+        """
+        while (np.linalg.norm(self.grad) > self.precision) and (self.iter_count < self.max_iterations):
+            self.iterate()
+
+        if (self.iter_count == self.max_iterations):
+            print("Max iterations limit reached")
+            print(self)
+        else:
+            print("Iterations finished succesully!")
+            print(self)
+
+def f(x):
+    return np.dot((x-10), (x-10))
+
+x = np.array([200000])
+trial = SimpleGradient(f, x)
+trial.run()
