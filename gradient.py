@@ -30,13 +30,13 @@ class AbstractGradient(object):
         self.figure, self.f = plt.subplots(2 + len(self.x), sharex=True)
         self.lines = [0]*(len(self.x)+2)
         self.lines[0], = self.f[0].plot(self.iter_count, self.func_value, 'k')
-        self.f[0].set_title('Function')
+        self.f[0].set_title('f(x)')
         self.lines[1], = self.f[1].plot(self.iter_count, self.grad_norm, 'k')
         self.f[1].set_title('Gradient norm')
 
         for i in range(len(self.x)):
             self.lines[2+i], = self.f[2+i].plot(self.iter_count, self.x[i])
-            self.f[2+i].set_title("Variable X%s" % (i+1))
+            self.f[2+i].set_title("x%s" % (i+1))
             self.f[2+i].set_autoscalex_on(True)
             self.f[2+i].set_autoscaley_on(True)
 
@@ -75,7 +75,6 @@ class SimpleGradient(AbstractGradient):
                 max_iterations = 500, plot = False, show_every=20):
         self.func = func
         self.func_value = func(x_start)
-        self.x_start = x_start
         self.x = x_start
         self.gamma = gamma
         self.precision = precision
@@ -120,9 +119,67 @@ class SimpleGradient(AbstractGradient):
 
         if (self.plot == True): self.show_plot()
 
+class HardBall(AbstractGradient):
+    """
+    Implements hard ball method gradient descent
+    """
+    def __init__(self, func, x_start, alpha = 0.5, beta = 0.5, precision=0.00001,
+                max_iterations = 500, plot = False, show_every=20):
+        self.func = func
+        self.func_value = func(x_start)
+        self.x = x_start
+        self.x_prev = x_start
+        self.delta_x = 0
+        self.alpha = alpha
+        self.beta = beta
+        self.precision = precision
+        self.grad = SimpleGradient.calculate_gradient(func, x_start)
+        self.grad_norm = np.linalg.norm(self.grad)
+        self.iter_count = 0
+        self.max_iterations = max_iterations
+        self.plot = plot
+        self.show_every = show_every
+
+    def iterate(self):
+        """
+        Makes an iteraion of gradient descent
+        """
+        self.x_prev = self.x
+        self.x = self.x - self.alpha * self.grad + self.beta * self.delta_x
+        self.delta_x = self.x - self.x_prev
+        self.func_value = self.func(self.x)
+        self.grad = SimpleGradient.calculate_gradient(self.func, self.x)
+        self.grad_norm = np.linalg.norm(self.grad)
+
+        self.iter_count += 1
+
+    def __str__(self):
+        return "Method: Hard Ball\nIterations made: %s\nCurrent values:\nx: %s\
+                \ngradient: %s\nf: %s" \
+                % (self.iter_count, self.x, self.grad, self.func_value)
+
+    def run(self):
+        """
+        Runs iterations of gradient descent until a stopping condition is
+        fulfilled
+        """
+        if (self.plot == True): self.initialize_plot()
+        while (self.grad_norm > self.precision) and (self.iter_count < self.max_iterations):
+            self.iterate()
+            if (self.plot == True) and (self.iter_count % self.show_every == 0): self.update_plot()
+
+        if (self.iter_count == self.max_iterations):
+            print("Max iterations limit reached")
+            print(self)
+        else:
+            print("Iterations finished succesully!")
+            print(self)
+
+        if (self.plot == True): self.show_plot()
+
 def f(x):
     return (1-x[0])**2 + 100*(x[1]-x[0]**2)**2
 
 x = np.array([-1, 1])
-trial = SimpleGradient(f, x, gamma = 0.001, plot = True, show_every=200, max_iterations = 100000)
+trial = HardBall(f, x, alpha = 0.001, plot = True, show_every=200, max_iterations = 100000)
 trial.run()
